@@ -29,31 +29,10 @@ import (
 //
 // The Reset() series of methods allow the camera position and/or zoom to be
 // reset to their original values. If NewKeyCamera() was used to instantiate, then
-// those defaults are Pos(0,0) and Zoom(1). If NewKeyCameraParams() was used, the
-// initial values for position and zoom provided as parameters are saved within
-// the camera and then used when Reset() is called.
-//
-// Example usage within the context of Pixel:
-//
-//     // ... prior initialization
-//     cam := pixel.NewKeyCamera(win.Bounds().Center()) // using defaults
-//     // alternatively: NewCameraParams(width/2, height/2, 200, 1.1) for window center
-//     loopStart := time.Now()
-//     for !win.Closed() {
-//         elapsed := time.Since(loopStart)
-//         loopStart = time.Now()
-//
-//         // Reset() should be called before Update() and before
-//         // setting the window's matrix (via SetMatrix())
-//         if win.JustPressed(pixelgl.KeyHome) {
-//             cam.Reset() // reset Position and Zoom to (0,0) and 1
-//         }
-//
-//         cam.Update(win, elapsed.Seconds()) // camera updates position, zoom, etc
-//         win.SetMatrix(cam.GetMatrix()) // provide transformation matrix to window
-//         win.Clear()
-//         //... redraw window, update state, etc
-//
+// those defaults are the "initialCenter" parameter and Zoom(1). If
+// NewKeyCameraParams() was used, the initial values for position and zoom
+// provided as parameters are saved within the camera and then used when
+// Reset() is called.
 type KeyCamera struct {
 	Position  pixel.Vec // X,Y location of the camera
 	PanSpeed  float64   // pixels/sec speed of camera pan
@@ -69,10 +48,9 @@ type KeyCamera struct {
 	ZoomLevel               func() float64 // func to get a zoom level, default to mouse y-scroll value
 
 	// storage of values used internally
-	prevWinBounds pixel.Rect
-	origPosition  pixel.Vec
-	origZoom      float64
-	lastUpdate    time.Time
+	origPosition pixel.Vec
+	origZoom     float64
+	lastUpdate   time.Time
 }
 
 // NewKeyCamera creates a new camera with sane defaults.
@@ -99,16 +77,15 @@ func NewKeyCamera(initalCenter pixel.Vec) *KeyCamera {
 		ZExtents:  clamp{-50, 50},
 		UpButton:  pixelgl.KeyUp, DownButton: pixelgl.KeyDown,
 		LeftButton: pixelgl.KeyLeft, RightButton: pixelgl.KeyRight,
-		ZoomLevel:     nil,
-		prevWinBounds: pixel.Rect{},
-		origPosition:  initalCenter,
-		origZoom:      1,
-		lastUpdate:    time.Now()}
+		ZoomLevel:    nil,
+		origPosition: initalCenter,
+		origZoom:     1,
+		lastUpdate:   time.Now()}
 }
 
 // NewKeyCameraParams creates a new camera with the given parameters. "initialCenter"
 // and "origZoom" are stored and used for calls to Reset(). Other camera parameters
-// are set according to the defaults (see NewCamera()) but can be changed.
+// are set according to the defaults (see NewKeyCamera()) but can be changed.
 func NewKeyCameraParams(initialCenter pixel.Vec, origZoom, panSpeed, zoomSpeed float64) *KeyCamera {
 	c := NewKeyCamera(initialCenter)
 	c.Zoom = origZoom
@@ -124,10 +101,7 @@ func NewKeyCameraParams(initialCenter pixel.Vec, origZoom, panSpeed, zoomSpeed f
 // Position.X, Position.Y, and Zoom are clamped to XExtents, YExtents, and ZExtents
 // respectively.
 func (cam *KeyCamera) Update(win *pixelgl.Window) {
-	// save window bounds (used in GetMatrix()) only when changed
-	if cam.prevWinBounds != win.Bounds() {
-		cam.prevWinBounds = win.Bounds()
-	}
+	// need to know seconds elapsed since last call for correct cam movement
 	timeElapsed := time.Since(cam.lastUpdate).Seconds()
 	cam.lastUpdate = time.Now()
 	// update pan
@@ -169,8 +143,8 @@ func (cam *KeyCamera) GetMatrix() pixel.Matrix {
 	return pixel.IM.Moved(cam.Position).Scaled(cam.origPosition, cam.Zoom)
 }
 
-// Unproject will translate a point to its apparent position in the camera's
-// view. This method is identical to:
+// Unproject will translate a point from its window position to its "world"
+// position. This method is identical to:
 //
 //     m := cam.GetMatrix()
 //     m.Unproject(point)
