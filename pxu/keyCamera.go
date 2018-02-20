@@ -28,15 +28,15 @@ import (
 // Position.Y, and Position.Z are clamped to, respectively.
 //
 // The Reset() series of methods allow the camera position and/or zoom to be
-// reset to their original values. If NewCamera() was used to instantiate, then
-// those defaults are Pos(0,0) and Zoom(1). If NewCameraParams() was used, the
+// reset to their original values. If NewKeyCamera() was used to instantiate, then
+// those defaults are Pos(0,0) and Zoom(1). If NewKeyCameraParams() was used, the
 // initial values for position and zoom provided as parameters are saved within
 // the camera and then used when Reset() is called.
 //
 // Example usage within the context of Pixel:
 //
 //     // ... prior initialization
-//     cam := pixel.NewKeyCamera() // using defaults
+//     cam := pixel.NewKeyCamera(win.Bounds().Center()) // using defaults
 //     // alternatively: NewCameraParams(width/2, height/2, 200, 1.1) for window center
 //     loopStart := time.Now()
 //     for !win.Closed() {
@@ -75,10 +75,10 @@ type KeyCamera struct {
 	lastUpdate    time.Time
 }
 
-// NewCamera creates a new camera with sane defaults.
+// NewKeyCamera creates a new camera with sane defaults.
 //
+// A recommended initialCenter is `win.Bounds().Center()` (center of window).
 // Default values are:
-//     Position: pixel.ZV // X=0, Y=0
 //     PanSpeed: 200 // pixels/sec
 //     Zoom: 1
 //     ZoomSpeed: 1.1
@@ -88,31 +88,29 @@ type KeyCamera struct {
 //
 // Keyboard Up, Down, Left, and Right control panning, and the mouse wheel
 // controls zoom.
-func NewKeyCamera() *KeyCamera {
+func NewKeyCamera(initalCenter pixel.Vec) *KeyCamera {
 	return &KeyCamera{
-		pixel.ZV,
-		200,
-		1,
-		1.1,
-		clamp{-5000, 5000},
-		clamp{-5000, 5000},
-		clamp{-50, 50},
-		pixelgl.KeyUp, pixelgl.KeyDown,
-		pixelgl.KeyLeft, pixelgl.KeyRight,
-		nil,
-		pixel.Rect{},
-		pixel.ZV,
-		1,
-		time.Now()}
+		Position:  initalCenter,
+		PanSpeed:  200,
+		Zoom:      1,
+		ZoomSpeed: 1.1,
+		XExtents:  clamp{-5000, 5000},
+		YExtents:  clamp{-5000, 5000},
+		ZExtents:  clamp{-50, 50},
+		UpButton:  pixelgl.KeyUp, DownButton: pixelgl.KeyDown,
+		LeftButton: pixelgl.KeyLeft, RightButton: pixelgl.KeyRight,
+		ZoomLevel:     nil,
+		prevWinBounds: pixel.Rect{},
+		origPosition:  initalCenter,
+		origZoom:      1,
+		lastUpdate:    time.Now()}
 }
 
-// NewCameraParams creates a new camera with the given parameters. "origPosition"
+// NewKeyCameraParams creates a new camera with the given parameters. "initialCenter"
 // and "origZoom" are stored and used for calls to Reset(). Other camera parameters
 // are set according to the defaults (see NewCamera()) but can be changed.
-func NewKeyCameraParams(origPosition pixel.Vec, origZoom, panSpeed, zoomSpeed float64) *KeyCamera {
-	c := NewKeyCamera()
-	c.Position = origPosition
-	c.origPosition = origPosition
+func NewKeyCameraParams(initialCenter pixel.Vec, origZoom, panSpeed, zoomSpeed float64) *KeyCamera {
+	c := NewKeyCamera(initialCenter)
 	c.Zoom = origZoom
 	c.origZoom = origZoom
 	c.PanSpeed = panSpeed
@@ -134,16 +132,16 @@ func (cam *KeyCamera) Update(win *pixelgl.Window) {
 	cam.lastUpdate = time.Now()
 	// update pan
 	if win.Pressed(cam.LeftButton) {
-		cam.Position.X -= cam.PanSpeed * timeElapsed
-	}
-	if win.Pressed(cam.RightButton) {
 		cam.Position.X += cam.PanSpeed * timeElapsed
 	}
+	if win.Pressed(cam.RightButton) {
+		cam.Position.X -= cam.PanSpeed * timeElapsed
+	}
 	if win.Pressed(cam.DownButton) {
-		cam.Position.Y -= cam.PanSpeed * timeElapsed
+		cam.Position.Y += cam.PanSpeed * timeElapsed
 	}
 	if win.Pressed(cam.UpButton) {
-		cam.Position.Y += cam.PanSpeed * timeElapsed
+		cam.Position.Y -= cam.PanSpeed * timeElapsed
 	}
 
 	// update zoom based on either the user-defined "ZoomLevel()"
@@ -168,8 +166,7 @@ func (cam *KeyCamera) Update(win *pixelgl.Window) {
 //
 //     win.SetMatrix(cam.GetMatrix())
 func (cam *KeyCamera) GetMatrix() pixel.Matrix {
-	return pixel.IM.Scaled(cam.Position, cam.Zoom).
-		Moved(cam.prevWinBounds.Center().Sub(cam.Position))
+	return pixel.IM.Moved(cam.Position).Scaled(cam.origPosition, cam.Zoom)
 }
 
 // Unproject will translate a point to its apparent position in the camera's

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/quillaja/goutil/pxu"
 
@@ -59,10 +60,12 @@ func run() {
 	// create cams
 	var cam pxu.Camera
 	switch camType {
-	case "keycam":
-		cam = pxu.NewKeyCamera()
-	case "mousecam":
-		cam = pxu.NewMouseCamera(pixel.ZV)
+	case "keycamera":
+		cam = pxu.NewKeyCamera(win.Bounds().Center())
+	case "mousecamera":
+		cam = pxu.NewMouseCamera(win.Bounds().Center())
+	default:
+		panic(fmt.Errorf("'%s' not a valid camera", camType))
 	}
 
 	for !win.Closed() {

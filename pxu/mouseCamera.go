@@ -15,7 +15,7 @@ import (
 // "if I zoom with the mouse at the top right, then the same "world coordinates"
 // would be under the mouse after the zoom."
 type MouseCamera struct {
-	Pos       pixel.Vec
+	Position  pixel.Vec
 	Zoom      float64
 	ZoomSpeed float64
 
@@ -32,7 +32,7 @@ type MouseCamera struct {
 
 func NewMouseCamera(initialCenter pixel.Vec) *MouseCamera {
 	return &MouseCamera{
-		Pos:          initialCenter,
+		Position:     initialCenter,
 		Zoom:         1,
 		ZoomSpeed:    1.1,
 		XExtents:     clamp{-5000, 5000},
@@ -55,7 +55,7 @@ func (c *MouseCamera) Update(win *pixelgl.Window) {
 
 		// todo: check that Pos + delta is within extents.
 		// if NOT, then alter delta to land in extents, update Pos etc.
-		c.Pos = c.Pos.Add(delta)
+		c.Position = c.Position.Add(delta)
 		c.prevMousePos = newMousePos
 
 		c.viewMatrix = c.viewMatrix.Moved(delta)
@@ -78,12 +78,12 @@ func (c *MouseCamera) GetMatrix() pixel.Matrix {
 }
 
 func (c *MouseCamera) ResetPosition() {
-	c.viewMatrix = c.viewMatrix.Moved(c.origCenter.Sub(c.Pos))
-	c.Pos = c.origCenter
+	c.viewMatrix = c.viewMatrix.Moved(c.origCenter.Sub(c.Position))
+	c.Position = c.origCenter
 }
 
 func (c *MouseCamera) ResetZoom() {
-	c.viewMatrix = pixel.IM.Moved(c.Pos)
+	c.viewMatrix = pixel.IM.Moved(c.Position)
 	c.Zoom = 1
 }
 
