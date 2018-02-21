@@ -33,6 +33,19 @@ type MouseCamera struct {
 	origZoom          float64
 }
 
+// NewMouseCamera creates a new camera with default values. A recommended setting
+// for worldZeroInWindow is `win.Bounds().Center` (center of the window).
+//
+// Defaults:
+//
+//     Position:   pixel.ZV,
+//     Zoom:       1,
+//     ZoomSpeed:  1.1,
+//     XExtents:   clamp{-5000, 5000},
+//     YExtents:   clamp{-5000, 5000},
+//     ZExtents:   clamp{-50, 50},
+//     DragButton: pixelgl.MouseButtonLeft
+//
 func NewMouseCamera(worldZeroInWindow pixel.Vec) *MouseCamera {
 	return &MouseCamera{
 		Position:          pixel.ZV,
@@ -49,6 +62,8 @@ func NewMouseCamera(worldZeroInWindow pixel.Vec) *MouseCamera {
 		origZoom:          1}
 }
 
+// NewMouseCameraParams creates a camera with the parameters specified. Other
+// paramaters can be still be modified. See `NewMouseCamera` for more info.
 func NewMouseCameraParams(worldZeroInWindow, origPos pixel.Vec, origZoom, zoomSpeed float64) *MouseCamera {
 	c := NewMouseCamera(worldZeroInWindow)
 	c.origPos = origPos
@@ -58,6 +73,8 @@ func NewMouseCameraParams(worldZeroInWindow, origPos pixel.Vec, origZoom, zoomSp
 	return c
 }
 
+// Update recalculates the camera's position and zoom, and is generally called
+// each frame before setting the window's matrix.
 func (c *MouseCamera) Update(win *pixelgl.Window) {
 	// translate the matrix only when mouse is dragged, and then translate
 	// by the difference between the new and previous mouse positions.
@@ -100,26 +117,36 @@ func (c *MouseCamera) Update(win *pixelgl.Window) {
 
 }
 
+// GetMatrix gets a transformation matrix to apply to the window.
+//
+//     win.SetMatrix(cam.GetMatrix())
 func (c *MouseCamera) GetMatrix() pixel.Matrix {
 	return c.viewMatrix
 }
 
+// ResetPosition resets the camera's position.
 func (c *MouseCamera) ResetPosition() {
 	c.viewMatrix = pixel.IM.Scaled(pixel.ZV, c.Zoom).Moved(c.worldZeroInWindow)
 	c.Position = c.origPos
 }
 
+// ResetZoom resets the camera's zoom factor.
 func (c *MouseCamera) ResetZoom() {
 	c.viewMatrix = pixel.IM.Moved(c.worldZeroInWindow.Sub(c.Position))
 	c.Zoom = c.origZoom
 }
 
+// Reset resets the camera's position and zoom factor.
 func (c *MouseCamera) Reset() {
 	// could do c.viewMatrix = pixel.IM.Moved(c.worldZeroInWindow) as well
 	c.ResetZoom()
 	c.ResetPosition()
 }
 
+// Unproject gets a "world" coordinate from a "screen" coordinate, and is
+// indentical to:
+//
+//     cam.GetMatrix().Unproject(point)
 func (c *MouseCamera) Unproject(point pixel.Vec) pixel.Vec {
 	return c.viewMatrix.Unproject(point)
 }
