@@ -19,9 +19,12 @@ import (
 // Zoom is controlled by the Zoom and ZoomSpeed members. Zooming is based
 // on multication, so a "zero" zoom is Zoom == 1. The ZoomSpeed is based on
 // expotentiation where ZoomSpeed is the base which is raised to some "zoom
-// level" power (ie ZoomSpeed**zoomlvl). This zoom level is usually the mouse's
-// Y-scroll position, but can be customized by providing setting ZoomLevel to
-// a function with the signature `func() float64`.
+// level" power (ie ZoomSpeed**zoomlvl). This zoom level controlled by the
+// + and - keys by default, but can be customized by setting ZoomLevel to
+// a function with the signature `func() float64`. For example, this library
+// provides `GetZoomLevelFromMouseScroll()` which creates such a function to
+// get the zoom level from the mouse's scroll wheel when provided with a
+// pointer to a pixelgl.Window.
 //
 // Limits on panning and zooming are provided by XExtents, YExtents, and
 // ZExtents which provide "Low" and "High" limits to which Position.X,
@@ -29,12 +32,12 @@ import (
 //
 // The Reset() series of methods allow the camera position and/or zoom to be
 // reset to their original values. If NewKeyCamera() was used to instantiate, then
-// those defaults are the "initialCenter" parameter and Zoom(1). If
+// those defaults are the "origCenter" parameter and Zoom(1). If
 // NewKeyCameraParams() was used, the initial values for position and zoom
 // provided as parameters are saved within the camera and then used when
 // Reset() is called.
 type KeyCamera struct {
-	Position  pixel.Vec // X,Y location of the camera
+	Position  pixel.Vec // X,Y location in "world" of the camera
 	PanSpeed  float64   // pixels/sec speed of camera pan
 	Zoom      float64   // current zoom factor of the camera
 	ZoomSpeed float64   // speed at which the camera zooms, eg 2=2x zoom for each 'zoom level'
@@ -43,19 +46,21 @@ type KeyCamera struct {
 	YExtents clamp // min and max extents the camera can pan vertically
 	ZExtents clamp // min and max zoom factor
 
-	UpButton, DownButton    pixelgl.Button // which buttons are to be used for up/down panning
-	LeftButton, RightButton pixelgl.Button // which buttons are to be used for left/right panning
-	ZoomLevel               func() float64 // func to get a zoom level, default to mouse y-scroll value
+	UpButton, DownButton        pixelgl.Button // which buttons are to be used for up/down panning
+	LeftButton, RightButton     pixelgl.Button // which buttons are to be used for left/right panning
+	ZoomInButton, ZoomOutButton pixelgl.Button // which buttons are to be used for zoom in/out
+	ZoomLevel                   func() float64 // func to get a zoom level as alternative to buttons
 
 	// storage of values used internally
-	origPosition pixel.Vec
-	origZoom     float64
-	lastUpdate   time.Time
+	worldZeroInWindow pixel.Vec
+	origPosition      pixel.Vec
+	origZoom          float64
+	lastUpdate        time.Time
 }
 
 // NewKeyCamera creates a new camera with sane defaults.
 //
-// A recommended initialCenter is `win.Bounds().Center()` (center of window).
+// A recommended worldZeroInWindow is `win.Bounds().Center()` (center of window).
 // Default values are:
 //     PanSpeed: 200 // pixels/sec
 //     Zoom: 1
@@ -64,11 +69,11 @@ type KeyCamera struct {
 //     YExtents.Low = -5000, YExtents.High = 5000
 //     ZExtents.Low = -50, ZExtents.High = 50
 //
-// Keyboard Up, Down, Left, and Right control panning, and the mouse wheel
-// controls zoom.
-func NewKeyCamera(initalCenter pixel.Vec) *KeyCamera {
+// Keyboard Up, Down, Left, and Right control panning, and the + and - buttons
+// (aka = and -) control zooming.
+func NewKeyCamera(worldZeroInWindow pixel.Vec) *KeyCamera {
 	return &KeyCamera{
-		Position:  initalCenter,
+		Position:  pixel.ZV,
 		PanSpeed:  200,
 		Zoom:      1,
 		ZoomSpeed: 1.1,
@@ -77,17 +82,21 @@ func NewKeyCamera(initalCenter pixel.Vec) *KeyCamera {
 		ZExtents:  clamp{-50, 50},
 		UpButton:  pixelgl.KeyUp, DownButton: pixelgl.KeyDown,
 		LeftButton: pixelgl.KeyLeft, RightButton: pixelgl.KeyRight,
-		ZoomLevel:    nil,
-		origPosition: initalCenter,
-		origZoom:     1,
-		lastUpdate:   time.Now()}
+		ZoomInButton: pixelgl.KeyEqual, ZoomOutButton: pixelgl.KeyMinus,
+		ZoomLevel:         nil,
+		worldZeroInWindow: worldZeroInWindow,
+		origPosition:      pixel.ZV,
+		origZoom:          1,
+		lastUpdate:        time.Now()}
 }
 
-// NewKeyCameraParams creates a new camera with the given parameters. "initialCenter"
+// NewKeyCameraParams creates a new camera with the given parameters. "origPosition"
 // and "origZoom" are stored and used for calls to Reset(). Other camera parameters
 // are set according to the defaults (see NewKeyCamera()) but can be changed.
-func NewKeyCameraParams(initialCenter pixel.Vec, origZoom, panSpeed, zoomSpeed float64) *KeyCamera {
-	c := NewKeyCamera(initialCenter)
+func NewKeyCameraParams(worldZeroInWindow, origPosition pixel.Vec, origZoom, panSpeed, zoomSpeed float64) *KeyCamera {
+	c := NewKeyCamera(worldZeroInWindow)
+	c.Position = origPosition
+	c.origPosition = origPosition
 	c.Zoom = origZoom
 	c.origZoom = origZoom
 	c.PanSpeed = panSpeed
@@ -97,7 +106,7 @@ func NewKeyCameraParams(initialCenter pixel.Vec, origZoom, panSpeed, zoomSpeed f
 
 // Update recalculates the camera position and zoom, and is generally called
 // each frame before setting the window's matrx. Update checks the keyboard for
-// the status of the defined panning and zooming controls (see `Camera`).
+// the status of the defined panning and zooming controls (see `KeyCamera`).
 // Position.X, Position.Y, and Zoom are clamped to XExtents, YExtents, and ZExtents
 // respectively.
 func (cam *KeyCamera) Update(win *pixelgl.Window) {
@@ -106,25 +115,31 @@ func (cam *KeyCamera) Update(win *pixelgl.Window) {
 	cam.lastUpdate = time.Now()
 	// update pan
 	if win.Pressed(cam.LeftButton) {
-		cam.Position.X += cam.PanSpeed * timeElapsed
-	}
-	if win.Pressed(cam.RightButton) {
 		cam.Position.X -= cam.PanSpeed * timeElapsed
 	}
+	if win.Pressed(cam.RightButton) {
+		cam.Position.X += cam.PanSpeed * timeElapsed
+	}
 	if win.Pressed(cam.DownButton) {
-		cam.Position.Y += cam.PanSpeed * timeElapsed
+		cam.Position.Y -= cam.PanSpeed * timeElapsed
 	}
 	if win.Pressed(cam.UpButton) {
-		cam.Position.Y -= cam.PanSpeed * timeElapsed
+		cam.Position.Y += cam.PanSpeed * timeElapsed
 	}
 
 	// update zoom based on either the user-defined "ZoomLevel()"
-	// or the mouse wheel's Y position
+	// or the default behavior (keys)
 	var zlvl float64
 	if cam.ZoomLevel != nil {
 		zlvl = cam.ZoomLevel()
 	} else {
-		zlvl = win.MouseScroll().Y
+		// default behavior
+		if win.Pressed(cam.ZoomInButton) {
+			zlvl = timeElapsed * 30 // timeElapsed will be about 1/60 sec @ 60 fps
+		}
+		if win.Pressed(cam.ZoomOutButton) {
+			zlvl = timeElapsed * -30
+		}
 	}
 	cam.Zoom *= math.Pow(cam.ZoomSpeed, zlvl)
 
@@ -140,7 +155,8 @@ func (cam *KeyCamera) Update(win *pixelgl.Window) {
 //
 //     win.SetMatrix(cam.GetMatrix())
 func (cam *KeyCamera) GetMatrix() pixel.Matrix {
-	return pixel.IM.Moved(cam.Position).Scaled(cam.origPosition, cam.Zoom)
+	return pixel.IM.Moved(cam.worldZeroInWindow.Sub(cam.Position)).
+		Scaled(cam.worldZeroInWindow, cam.Zoom)
 }
 
 // Unproject will translate a point from its window position to its "world"
@@ -172,3 +188,15 @@ func (cam *KeyCamera) ResetYPan() { cam.Position.Y = cam.origPosition.Y }
 
 // ResetZoom restores the camera's Zoom to its initial setting.
 func (cam *KeyCamera) ResetZoom() { cam.Zoom = cam.origZoom }
+
+// GetZoomLevelFromMouseScroll provides a convenient way to make a KeyCamera's
+// "ZoomLvl" property, which is a func() float64.
+//
+//     cam.ZoomLvl = GetZoomLevelFromMouseScroll(win)
+//     for !win.Closed() {
+//         ...
+func GetZoomLevelFromMouseScroll(win *pixelgl.Window) func() float64 {
+	return func() float64 {
+		return win.MouseScroll().Y
+	}
+}
