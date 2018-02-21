@@ -38,12 +38,12 @@ type MouseCamera struct {
 //
 // Defaults:
 //
-//     Position:   pixel.ZV,
+//     Position:   pixel.ZV (0,0),
 //     Zoom:       1,
 //     ZoomSpeed:  1.1,
-//     XExtents:   clamp{-5000, 5000},
-//     YExtents:   clamp{-5000, 5000},
-//     ZExtents:   clamp{-50, 50},
+//     XExtents:   Low: -5000, High: 5000,
+//     YExtents:   Low: -5000, High: 5000,
+//     ZExtents:   Low: 0.1, High: 50,
 //     DragButton: pixelgl.MouseButtonLeft
 //
 func NewMouseCamera(worldZeroInWindow pixel.Vec) *MouseCamera {
@@ -53,7 +53,7 @@ func NewMouseCamera(worldZeroInWindow pixel.Vec) *MouseCamera {
 		ZoomSpeed:         1.1,
 		XExtents:          clamp{-5000, 5000},
 		YExtents:          clamp{-5000, 5000},
-		ZExtents:          clamp{-50, 50},
+		ZExtents:          clamp{0.1, 50},
 		DragButton:        pixelgl.MouseButtonLeft,
 		viewMatrix:        pixel.IM.Moved(worldZeroInWindow),
 		worldZeroInWindow: worldZeroInWindow,
@@ -149,4 +149,14 @@ func (c *MouseCamera) Reset() {
 //     cam.GetMatrix().Unproject(point)
 func (c *MouseCamera) Unproject(point pixel.Vec) pixel.Vec {
 	return c.viewMatrix.Unproject(point)
+}
+
+// GetPosition returns the camera's position.
+func (c *MouseCamera) GetPosition() pixel.Vec {
+	return c.Position
+}
+
+// GetZoom returns the camera's zoom factor.
+func (c *MouseCamera) GetZoom() float64 {
+	return c.Zoom
 }

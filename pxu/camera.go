@@ -38,4 +38,6 @@ type Camera interface {
 	GetMatrix() pixel.Matrix
 	Reset()
 	Unproject(pixel.Vec) pixel.Vec
+	GetPosition() pixel.Vec
+	GetZoom() float64
 }

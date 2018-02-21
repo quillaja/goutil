@@ -67,7 +67,7 @@ type KeyCamera struct {
 //     ZoomSpeed: 1.1
 //     XExtents.Low = -5000, XExtents.High = 5000
 //     YExtents.Low = -5000, YExtents.High = 5000
-//     ZExtents.Low = -50, ZExtents.High = 50
+//     ZExtents.Low = 0.1, ZExtents.High = 50
 //
 // Keyboard Up, Down, Left, and Right control panning, and the + and - buttons
 // (aka = and -) control zooming.
@@ -79,7 +79,7 @@ func NewKeyCamera(worldZeroInWindow pixel.Vec) *KeyCamera {
 		ZoomSpeed: 1.1,
 		XExtents:  clamp{-5000, 5000},
 		YExtents:  clamp{-5000, 5000},
-		ZExtents:  clamp{-50, 50},
+		ZExtents:  clamp{0.1, 50},
 		UpButton:  pixelgl.KeyUp, DownButton: pixelgl.KeyDown,
 		LeftButton: pixelgl.KeyLeft, RightButton: pixelgl.KeyRight,
 		ZoomInButton: pixelgl.KeyEqual, ZoomOutButton: pixelgl.KeyMinus,
@@ -188,6 +188,16 @@ func (cam *KeyCamera) ResetYPan() { cam.Position.Y = cam.origPosition.Y }
 
 // ResetZoom restores the camera's Zoom to its initial setting.
 func (cam *KeyCamera) ResetZoom() { cam.Zoom = cam.origZoom }
+
+// GetPosition returns the camera's position.
+func (cam *KeyCamera) GetPosition() pixel.Vec {
+	return cam.Position
+}
+
+// GetZoom returns the camera's zoom factor.
+func (cam *KeyCamera) GetZoom() float64 {
+	return cam.Zoom
+}
 
 // GetZoomLevelFromMouseScroll provides a convenient way to make a KeyCamera's
 // "ZoomLvl" property, which is a func() float64.
