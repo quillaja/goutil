@@ -63,11 +63,11 @@ func run() {
 	var cam pxu.Camera
 	switch camType {
 	case "keycamera":
-		cam = pxu.NewKeyCamera(win.Bounds().Center())
+		cam = pxu.NewKeyCamera(pixel.V(0, win.Bounds().H()/2)) //win.Bounds().Center())
 		cam.(*pxu.KeyCamera).XExtents.High = 400
 		cam.(*pxu.KeyCamera).YExtents.Low = -400
 	case "mousecamera":
-		cam = pxu.NewMouseCamera(win.Bounds().Center())
+		cam = pxu.NewMouseCamera(pixel.ZV)
 		cam.(*pxu.MouseCamera).XExtents.High = 400
 		cam.(*pxu.MouseCamera).YExtents.Low = -400
 	default:

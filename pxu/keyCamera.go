@@ -52,10 +52,12 @@ type KeyCamera struct {
 	ZoomLevel                   func() float64 // func to get a zoom level as alternative to buttons
 
 	// storage of values used internally
+	viewMatrix        pixel.Matrix
 	worldZeroInWindow pixel.Vec
 	origPosition      pixel.Vec
 	origZoom          float64
 	lastUpdate        time.Time
+	corrected         bool // default of false
 }
 
 // NewKeyCamera creates a new camera with sane defaults.
@@ -84,6 +86,7 @@ func NewKeyCamera(worldZeroInWindow pixel.Vec) *KeyCamera {
 		LeftButton: pixelgl.KeyLeft, RightButton: pixelgl.KeyRight,
 		ZoomInButton: pixelgl.KeyEqual, ZoomOutButton: pixelgl.KeyMinus,
 		ZoomLevel:         nil,
+		viewMatrix:        pixel.IM,
 		worldZeroInWindow: worldZeroInWindow,
 		origPosition:      pixel.ZV,
 		origZoom:          1,
@@ -110,6 +113,12 @@ func NewKeyCameraParams(worldZeroInWindow, origPosition pixel.Vec, origZoom, pan
 // Position.X, Position.Y, and Zoom are clamped to XExtents, YExtents, and ZExtents
 // respectively.
 func (cam *KeyCamera) Update(win *pixelgl.Window) {
+	if !cam.corrected {
+		// a bit hackish, but works for now
+		cam.Position = win.Bounds().Center().Sub(cam.worldZeroInWindow)
+		cam.origPosition = cam.Position
+		cam.corrected = true
+	}
 	// need to know seconds elapsed since last call for correct cam movement
 	timeElapsed := time.Since(cam.lastUpdate).Seconds()
 	cam.lastUpdate = time.Now()
@@ -148,6 +157,8 @@ func (cam *KeyCamera) Update(win *pixelgl.Window) {
 	cam.Position.Y = pixel.Clamp(cam.Position.Y, cam.YExtents.Low, cam.YExtents.High)
 	cam.Zoom = pixel.Clamp(cam.Zoom, cam.ZExtents.Low, cam.ZExtents.High)
 
+	cam.viewMatrix = pixel.IM.Moved(win.Bounds().Center().Sub(cam.Position)).
+		Scaled(win.Bounds().Center(), cam.Zoom)
 }
 
 // GetMatrix gets the transformation matrix to apply the camera's settings to
@@ -155,8 +166,7 @@ func (cam *KeyCamera) Update(win *pixelgl.Window) {
 //
 //     win.SetMatrix(cam.GetMatrix())
 func (cam *KeyCamera) GetMatrix() pixel.Matrix {
-	return pixel.IM.Moved(cam.worldZeroInWindow.Sub(cam.Position)).
-		Scaled(cam.worldZeroInWindow, cam.Zoom)
+	return cam.viewMatrix
 }
 
 // Unproject will translate a point from its window position to its "world"
