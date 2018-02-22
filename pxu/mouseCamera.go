@@ -31,6 +31,7 @@ type MouseCamera struct {
 	prevMousePos      pixel.Vec
 	origPos           pixel.Vec
 	origZoom          float64
+	corrected         bool
 }
 
 // NewMouseCamera creates a new camera with default values. A recommended setting
@@ -76,6 +77,13 @@ func NewMouseCameraParams(worldZeroInWindow, origPos pixel.Vec, origZoom, zoomSp
 // Update recalculates the camera's position and zoom, and is generally called
 // each frame before setting the window's matrix.
 func (c *MouseCamera) Update(win *pixelgl.Window) {
+	if !c.corrected {
+		// a bit hackish, but works for now
+		c.Position = win.Bounds().Center().Sub(c.worldZeroInWindow)
+		c.origPos = c.Position
+		c.corrected = true
+	}
+
 	// translate the matrix only when mouse is dragged, and then translate
 	// by the difference between the new and previous mouse positions.
 	if win.JustPressed(pixelgl.MouseButtonLeft) {

@@ -67,7 +67,7 @@ func run() {
 		cam.(*pxu.KeyCamera).XExtents.High = 400
 		cam.(*pxu.KeyCamera).YExtents.Low = -400
 	case "mousecamera":
-		cam = pxu.NewMouseCamera(pixel.ZV)
+		cam = pxu.NewMouseCamera(pixel.V(win.Bounds().W()/3, win.Bounds().H()/3))
 		cam.(*pxu.MouseCamera).XExtents.High = 400
 		cam.(*pxu.MouseCamera).YExtents.Low = -400
 	default:
