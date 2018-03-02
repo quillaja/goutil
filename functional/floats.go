@@ -1,3 +1,4 @@
+// Package functional provides some basic map/filter/reduce tools for float64 and int.
 package functional
 
 import (

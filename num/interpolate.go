@@ -1,3 +1,4 @@
+// Package num provides some numeric tools such as interpolation and clamping.
 package num
 
 import "math"
