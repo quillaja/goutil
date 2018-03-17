@@ -31,7 +31,7 @@ func NormalizeAngleDeg(theta float64) float64 {
 // assumption that x is in the range [0.0, 1,0]. Essentially, a special case
 // of general linear interpolation.
 func UnitLerp(x, toMin, toMax float64) float64 {
-	return (1.0-x)*toMin + x*toMax
+	return toMin + x*(toMax-toMin)
 }
 
 // ReverseUnitLerp interpolates an x in the range [xMin, xMax] to the range [0,1].
@@ -45,7 +45,7 @@ func Lerp(x, xMin, xMax, toMin, toMax float64) float64 {
 	return toMin + (toMax-toMin)*((xMax-x)/(xMax-xMin))
 }
 
-// SmoothStep uses a sigmoid-like iterpolation to produce a smooth interpolation
+// SmoothStep uses a 3rd order polynomial to produce a smooth interpolation
 // of x to the range [0,1] when x is also in the range [0,1]. To interpolate
 // any x into a suitable argument for this function, use ReverseUnitLerp() first.
 // See: https://en.wikipedia.org/wiki/Smoothstep
@@ -57,6 +57,32 @@ func SmoothStep(x float64) float64 {
 		return 1
 	}
 	return x * x * (3 - 2*x)
+}
+
+// SmootherStep uses a 5th order polynomial to produce a smooth interpolation
+// of x to the range [0,1] when x is also in the range [0,1].
+// See: https://en.wikipedia.org/wiki/Smoothstep
+func SmootherStep(x float64) float64 {
+	if x <= 0 {
+		return 0
+	}
+	if 1 <= x {
+		return 1
+	}
+	return x * x * x * (x*(x*6-15) + 10)
+}
+
+// SmoothestStep uses a 7th order polynomial to produce a smooth interpolation
+// of x to the range [0,1] when x is also in the range [0,1].
+// See: https://en.wikipedia.org/wiki/Smoothstep
+func SmoothestStep(x float64) float64 {
+	if x <= 0 {
+		return 0
+	}
+	if 1 <= x {
+		return 1
+	}
+	return x * x * x * x * (x*(x*(x*-20+70)-84) + 35)
 }
 
 // Sigmoid returns the interpolation of x to the range [0,1] according to the
