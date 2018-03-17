@@ -11,6 +11,8 @@ import (
 // permuation array
 var p [512]int
 
+var defaultY, defaultZ float64
+
 // initialize when the package is used
 func init() {
 	FillPermutation(nil)
@@ -30,6 +32,10 @@ func FillPermutation(source rand.Source) {
 	copy(p[:256], r.Perm(256))
 	// fill 2nd half of array with duplicates
 	copy(p[256:], p[:256])
+
+	// get a y and z to be used for 1 and 2d noise functions
+	defaultY = Float64NM(0, 255)
+	defaultZ = Float64NM(0, 255)
 }
 
 // returns the dot product of vec3(x,y,z) (x,y,z in [0,1])
@@ -115,4 +121,33 @@ func Noise3(x, y, z float64) float64 {
 	// 		                                           grad(p[BA+1], x-1, y,   z-1)),
 	// 		                           num.UnitLerp(u, grad(p[AB+1], x,   y-1, z-1),
 	// 			                                       grad(p[BB+1], x-1, y-1, z-1))))
+}
+
+// Noise2 provides 2d noise based on Noise3.
+func Noise2(x, y float64) float64 {
+	return Noise3(x, y, defaultZ)
+}
+
+// Noise1 provides 1d noise based on Noise3.
+func Noise1(x float64) float64 {
+	return Noise3(x, defaultY, defaultZ)
+}
+
+// Noise3Octaves uses the idea of adding diffent samplings of perlin noise
+// together to add a "fractal" quality to the detail of the noise produced.
+//
+// See: http://flafla2.github.io/2014/08/09/perlinnoise.html
+// and: http://freespace.virgin.net/hugo.elias/models/m_perlin.htm (may be broken)
+func Noise3Octaves(x, y, z float64, octaves int, persistence float64) float64 {
+	total := 0.0
+	frequency := 1.0
+	amplitude := 1.0
+	maxVal := 0.0 //used for normalizing result to [-1,1]
+	for i := 0; i < octaves; i++ {
+		total += Noise3(x*frequency, y*frequency, z*frequency) * amplitude
+		maxVal += amplitude
+		amplitude *= persistence
+		frequency *= 2
+	}
+	return num.Lerp(total, -maxVal, maxVal, -1, 1) // normalize to [-1,1]
 }
