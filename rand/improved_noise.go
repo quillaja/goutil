@@ -11,6 +11,7 @@ import (
 // permuation array
 var p [512]int
 
+// these are y and z values used in Noise2() and Noise1()
 var defaultY, defaultZ float64
 
 // initialize when the package is used
@@ -33,12 +34,16 @@ func FillPermutation(source rand.Source) {
 	// fill 2nd half of array with duplicates
 	copy(p[256:], p[:256])
 
-	// get a y and z to be used for 1 and 2d noise functions
+	// get some y and z to be used for 1d and 2d noise functions
 	defaultY = Float64NM(0, 255)
 	defaultZ = Float64NM(0, 255)
 }
 
-// returns the dot product of vec3(x,y,z) (x,y,z in [0,1])
+// returns the dot product of vec3(x,y,z) (x,y,z in [0,1]) and one of the gradients in
+//     (1,1,0),(-1,1,0),(1,-1,0),(-1,-1,0),
+//     (1,0,1),(-1,0,1),(1,0,-1),(-1,0,-1),
+//     (0,1,1),(0,-1,1),(0,1,-1),(0,-1,-1)
+// chosen "randomly" based on the hash value
 func grad(hash int, x, y, z float64) float64 {
 	switch hash & 0xF {
 	case 0x0:
@@ -136,9 +141,13 @@ func Noise1(x float64) float64 {
 // Noise3Octaves uses the idea of adding diffent samplings of perlin noise
 // together to add a "fractal" quality to the detail of the noise produced.
 //
+// octaves is the number of samples taken and added together, usually 3 or 4 is a good.
+// lacunarity is the rate at which the frequency (space between samplings) increases, usually 2.
+// persistence is the rate at which the amplitude (how much sample affects octave) decreases, usually 0.5.
+//
 // See: http://flafla2.github.io/2014/08/09/perlinnoise.html
 // and: http://freespace.virgin.net/hugo.elias/models/m_perlin.htm (may be broken)
-func Noise3Octaves(x, y, z float64, octaves int, persistence float64) float64 {
+func Noise3Octaves(x, y, z float64, octaves int, lacunarity, persistence float64) float64 {
 	total := 0.0
 	frequency := 1.0
 	amplitude := 1.0
@@ -147,7 +156,7 @@ func Noise3Octaves(x, y, z float64, octaves int, persistence float64) float64 {
 		total += Noise3(x*frequency, y*frequency, z*frequency) * amplitude
 		maxVal += amplitude
 		amplitude *= persistence
-		frequency *= 2
+		frequency *= lacunarity
 	}
 	return num.Lerp(total, -maxVal, maxVal, -1, 1) // normalize to [-1,1]
 }

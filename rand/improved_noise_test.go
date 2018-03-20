@@ -41,3 +41,17 @@ func TestNoise3_Range(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkNoise3(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		offset := float64(i) / float64(b.N)
+		Noise3(offset, offset, offset)
+	}
+}
+
+func BenchmarkNoise3Octaves_4_2_05(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		offset := float64(i) / float64(b.N)
+		Noise3Octaves(offset, offset, offset, 4, 2, 0.5)
+	}
+}
