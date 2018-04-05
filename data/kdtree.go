@@ -46,7 +46,7 @@ func (t *KDTree) Len() int {
 }
 
 // Build will build (or rebuild) the tree with the given items.
-func (t *KDTree) Build(items ...Interface) {
+func (t *KDTree) Build(items []Interface) {
 	// check that all items have correct
 	// number of dimensions (avoid index out of bounds)
 	var sum int

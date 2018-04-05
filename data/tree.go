@@ -20,7 +20,7 @@ type SpacialTree interface {
 	// get a list of items in the tree
 	Items() []Interface
 	// build tree from item(s)
-	Build(items ...Interface)
+	Build(items []Interface)
 	// check if item is in the tree, based on its location
 	QueryPoint(item Interface) bool
 	// get all items within the region defined by the list of mins/maxs
@@ -36,10 +36,10 @@ type SpacialTree interface {
 // be equal length.
 type DistanceMetric func([]float64, []float64) float64
 
-// Euclidean is a DistanceMetric func which computes the
+// EuclideanSq is a DistanceMetric func which computes the
 // euclidean/cartesian/geometric distance. It actually returns the sum of
 // squares, without taking the square root.
-func Euclidean(a, b []float64) float64 {
+func EuclideanSq(a, b []float64) float64 {
 	if len(a) != len(b) {
 		panic("a and b are different lengths")
 	}
@@ -49,6 +49,11 @@ func Euclidean(a, b []float64) float64 {
 		sum += diff * diff
 	}
 	return sum
+}
+
+// Euclidean is the same as EuclideanSq() but takes the square root.
+func Euclidean(a, b []float64) float64 {
+	return math.Sqrt(EuclideanSq(a, b))
 }
 
 // Manhattan is a DistanceMetric func which computes the

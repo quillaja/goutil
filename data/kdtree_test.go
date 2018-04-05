@@ -33,7 +33,7 @@ func TestKDTree_Insert(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		items := makeItems(num*(i+1), max)
 
-		tree.Build(items...)
+		tree.Build(items)
 
 		t.Logf("inserted %d items", num*(i+1))
 		t.Logf("tree len: %d", tree.Len())
@@ -53,7 +53,7 @@ func TestKDTree_QueryPoint(t *testing.T) {
 	items := makeItems(100, 100)
 
 	tree := NewKDTree(2)
-	tree.Build(items...)
+	tree.Build(items)
 	t.Logf("tree len: %d", tree.Len())
 
 	for _, item := range items {
@@ -79,7 +79,7 @@ func testQueryRange(t *testing.T, searchRange [][2]float64) {
 
 	items := makeItems(100, max)
 	tree := NewKDTree(2)
-	tree.Build(items...)
+	tree.Build(items)
 	t.Logf("tree contains: %d items", tree.Len())
 
 	//items is now in the tree and the order and indexing is stable.
@@ -117,7 +117,7 @@ func TestKDTree_NearestNeighbor(t *testing.T) {
 	items = append(items, &point{1, 1})
 
 	tree := NewKDTree(2)
-	tree.Build(items...)
+	tree.Build(items)
 
 	found := tree.NearestNeighbor(Euclidean, 0, 0) // could also use []float64...
 	t.Log("search", 0, 0)
@@ -146,7 +146,7 @@ func TestKDTree_NearestNeighbor(t *testing.T) {
 func TestKDTree_NearestNeighbors(t *testing.T) {
 	items := makeItems(50, 20)
 	tree := NewKDTree(2)
-	tree.Build(items...)
+	tree.Build(items)
 	ks := []int{1, 2, 5, 8, 15}
 	for _, k := range ks {
 		found := tree.NearestNeighbors(Euclidean, k, 10, 10)
