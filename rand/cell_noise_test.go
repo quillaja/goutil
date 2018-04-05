@@ -11,10 +11,20 @@ func TestCellNoise(t *testing.T) {
 
 }
 
-func BenchmarkCellNoise(b *testing.B) {
+func BenchmarkCellNoiseSlow(b *testing.B) {
 	FillPermutation(rand.NewSource(0))
-	noise := CellNoise(2, 5, data.EuclideanSq)
+	const m = 6
+	noise := CellNoiseSlow(2, 5, data.EuclideanSq)
 	for n := 0; n < b.N; n++ {
-		noise(4*float64(n)/float64(b.N), 4*float64(n)/float64(b.N))
+		noise(m*float64(n)/float64(b.N), m*float64(n)/float64(b.N))
+	}
+}
+
+func BenchmarkCellNoise2D(b *testing.B) {
+	FillPermutation(rand.NewSource(0))
+	const m = 6
+	noise := CellNoise2D(m, m, 2, 5, data.EuclideanSq)
+	for n := 0; n < b.N; n++ {
+		noise(m*float64(n)/float64(b.N), m*float64(n)/float64(b.N))
 	}
 }
