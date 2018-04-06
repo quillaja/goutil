@@ -23,7 +23,7 @@ func BenchmarkCellNoiseSlow(b *testing.B) {
 func BenchmarkCellNoise2D(b *testing.B) {
 	FillPermutation(rand.NewSource(0))
 	const m = 6
-	noise := CellNoise2D(m, m, 2, 5, data.EuclideanSq)
+	noise := CellNoise2D(2, 5, data.EuclideanSq)
 	for n := 0; n < b.N; n++ {
 		noise(m*float64(n)/float64(b.N), m*float64(n)/float64(b.N))
 	}
