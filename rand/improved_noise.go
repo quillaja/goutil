@@ -9,34 +9,38 @@ import (
 )
 
 // permuation array
-var p [512]int
+var p *[512]int
 
 // these are y and z values used in Noise2() and Noise1()
 var defaultY, defaultZ float64
 
 // initialize when the package is used
 func init() {
-	FillPermutation(nil)
+	FillPermutation(time.Now().UnixNano())
 }
 
 // FillPermutation changes the permutation table used for noise generation.
 // If a source is provided, it uses that. Otherwise, it uses a source seeded
 // with the time.Now().UnixNano().
-func FillPermutation(source rand.Source) {
-	var r *rand.Rand
-	if source == nil {
-		r = rand.New(rand.NewSource(time.Now().UnixNano()))
-	} else {
-		r = rand.New(source)
-	}
-	// get a permutation of [0,255]
-	copy(p[:256], r.Perm(256))
-	// fill 2nd half of array with duplicates
-	copy(p[256:], p[:256])
+func FillPermutation(seed int64) {
+
+	p = MakePermutation(seed)
 
 	// get some y and z to be used for 1d and 2d noise functions
 	defaultY = Float64NM(0, 255)
 	defaultZ = Float64NM(0, 255)
+}
+
+// MakePermutation makes a permutation table used in noise generation.
+func MakePermutation(seed int64) (perm *[512]int) {
+	r := rand.New(rand.NewSource(seed))
+	perm = new([512]int)
+	// get a permutation of [0,255]
+	copy(perm[:256], r.Perm(256))
+	// fill 2nd half of array with duplicates
+	copy(perm[256:], perm[:256])
+
+	return
 }
 
 // returns the dot product of vec3(x,y,z) (x,y,z in [0,1]) and one of the gradients in

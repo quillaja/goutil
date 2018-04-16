@@ -1,8 +1,8 @@
 package rand
 
 import (
-	sr "math/rand"
 	"testing"
+	"time"
 )
 
 func TestNoise3(t *testing.T) {
@@ -11,7 +11,7 @@ func TestNoise3(t *testing.T) {
 	N := 256 * 20
 	XDELTA := 0.1
 
-	FillPermutation(sr.NewSource(1)) // use deterministic 'random' number for testing
+	FillPermutation(1) // use deterministic 'random' number for testing
 
 	A, B := make([]float64, N), make([]float64, N)
 	for i, x := 0, 0.0; i < N; i, x = i+1, x+XDELTA {
@@ -32,7 +32,7 @@ func TestNoise3_Range(t *testing.T) {
 	// just checks for values near 1 or -1
 	N := 100000
 
-	FillPermutation(nil)
+	FillPermutation(time.Now().UnixNano())
 
 	for i := 0; i < N; i++ {
 		a := Noise3(Float64NM(0, 256), Float64NM(0, 256), Float64NM(0, 256))
